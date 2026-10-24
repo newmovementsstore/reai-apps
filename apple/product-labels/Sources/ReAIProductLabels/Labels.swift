@@ -58,11 +58,9 @@ struct LabelSettings: Codable, Equatable {
     var ratesDate: String?
     static let convertible = ["EUR", "USD", "SEK", "DKK", "GBP"]
     var customized: Bool { !(styles ?? [:]).isEmpty || skuPrefix != nil || originPrefix != nil || !(currencyTexts ?? [:]).isEmpty }
-    /// Price labels start with a fixed 24 pt price; every other line sizes itself to fit.
-    func defaultStyle(_ role: LineRole) -> LineStyle { design == .price && role == .price ? LineStyle(size: 24) : LineStyle() }
-    func style(_ role: LineRole) -> LineStyle { styles?[design.rawValue + "." + role.rawValue] ?? defaultStyle(role) }
+    func style(_ role: LineRole) -> LineStyle { styles?[design.rawValue + "." + role.rawValue] ?? LineStyle() }
     mutating func setStyle(_ style: LineStyle, for role: LineRole) {
-        var all = styles ?? [:]; all[design.rawValue + "." + role.rawValue] = style == defaultStyle(role) ? nil : style
+        var all = styles ?? [:]; all[design.rawValue + "." + role.rawValue] = style == LineStyle() ? nil : style
         styles = all.isEmpty ? nil : all
     }
     var resolvedSkuPrefix: String { skuPrefix ?? "SKU:" }
@@ -182,7 +180,7 @@ enum LabelRenderer {
             let rowHeight = (bottom - priceTop) / CGFloat(own)
             for (index, value) in prices.prefix(own).enumerated() {
                 try add(.price, value, index: index, y: priceTop + CGFloat(index) * rowHeight, height: rowHeight,
-                        maxSize: min(36, rowHeight * 0.78), minSize: 7, bold: true, centered: true)
+                        maxSize: min(24, rowHeight * 0.78), minSize: 7, bold: true, centered: true)
             }
         } else {
             let hasBarcode = !item.barcode.isEmpty
