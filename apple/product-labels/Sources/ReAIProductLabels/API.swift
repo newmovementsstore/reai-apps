@@ -76,3 +76,24 @@ actor ReAIAPI {
         return try JSONDecoder().decode(T.self, from: data)
     }
 }
+
+/// Latest Norges Bank spot rates, as NOK per one unit of each currency.
+enum ExchangeRates {
+    static func fetch(_ codes: [String]) async throws -> (rates: [String: Decimal], date: String) {
+        guard !codes.isEmpty, codes.allSatisfy({ $0.range(of: "^[A-Z]{3}$", options: .regularExpression) != nil }),
+              let url = URL(string: "https://data.norges-bank.no/api/data/EXR/B.\(codes.joined(separator: "+")).NOK.SP?format=csv&lastNObservations=1&locale=en") else { return ([:], "") }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw appError("Could not load exchange rates from Norges Bank.") }
+        let rows = String(decoding: data, as: UTF8.self).split(whereSeparator: \.isNewline).map { $0.split(separator: ";", omittingEmptySubsequences: false).map(String.init) }
+        guard let header = rows.first, let code = header.firstIndex(of: "BASE_CUR"), let multiplier = header.firstIndex(of: "UNIT_MULT"),
+              let date = header.firstIndex(of: "TIME_PERIOD"), let value = header.firstIndex(of: "OBS_VALUE") else { throw appError("Could not load exchange rates from Norges Bank.") }
+        var rates: [String: Decimal] = [:], latest = ""
+        for row in rows.dropFirst() where row.count > max(code, multiplier, date, value) {
+            guard let quoted = Decimal(string: row[value], locale: Locale(identifier: "en_US_POSIX")), let power = Int(row[multiplier]) else { continue }
+            var unit = Decimal(1); for _ in 0..<power { unit *= 10 }
+            rates[row[code]] = quoted / unit; latest = max(latest, row[date])
+        }
+        guard Set(codes).isSubset(of: rates.keys) else { throw appError("Could not load exchange rates from Norges Bank.") }
+        return (rates, latest)
+    }
+}
