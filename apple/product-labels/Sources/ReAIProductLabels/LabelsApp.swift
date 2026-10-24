@@ -281,8 +281,10 @@ struct LabelsView: View {
                 ScrollView {
                     LazyVStack(spacing: 8) {
                         ForEach($model.saved.batch) { $item in
-                            BatchRow(item: $item, settings: model.saved.settings, previewed: model.previewId == item.id,
-                                     preview: { model.previewId = item.id }, remove: { model.saved.batch.removeAll { $0.id == item.id } })
+                            // Capture the id first: reading item inside removeAll overlaps the batch mutation and traps.
+                            let id = item.id
+                            BatchRow(item: $item, settings: model.saved.settings, previewed: model.previewId == id,
+                                     preview: { model.previewId = id }, remove: { model.saved.batch.removeAll { $0.id == id } })
                         }
                     }
                 }
