@@ -44,6 +44,8 @@ def checksum(path):
 
 def build(app_id, version=None):
     app = configuration(app_id, version)
+    # A stable local identity keeps Keychain access across rebuilds; ad-hoc otherwise.
+    identity = os.environ.get('REAI_SIGN_IDENTITY', '-')
     source = ROOT / app['path']
     swift = os.environ.get('SWIFT_BIN', 'swift')
     if not re.search(r'Swift version 6\.4(?:[ .]|$)', output(swift, '--version')):
@@ -88,10 +90,10 @@ def build(app_id, version=None):
         run('ditto', frameworks[0], embedded)
         shutil.copy2(frameworks[0].parents[2] / 'LICENSE', resources / 'Sparkle-LICENSE')
         from sparkle import sign_framework
-        sign_framework(embedded, '-')
+        sign_framework(embedded, identity, timestamp=False)
     # Ad-hoc development builds cannot load nested code under library validation.
     options = [] if app.get('sparkle', False) else ['--options', 'runtime']
-    run('codesign', '--force', *options, '--sign', '-', bundle)
+    run('codesign', '--force', *options, '--sign', identity, bundle)
     run('codesign', '--verify', '--strict', bundle)
     archive = destination / 'unsigned.zip'
     archive.unlink(missing_ok=True)

@@ -94,6 +94,8 @@ jobs:
           PRODUCT_LABELS_SPARKLE_PRIVATE_KEY: ${{ secrets.PRODUCT_LABELS_SPARKLE_PRIVATE_KEY }}
           SHIPPING_SPARKLE_PRIVATE_KEY: ${{ secrets.SHIPPING_SPARKLE_PRIVATE_KEY }}
           REAI_UNSIGNED_MAC: ${{ vars.REAI_UNSIGNED_MAC }}
+          MAC_SIGNING_P12: ${{ secrets.MAC_SIGNING_P12 }}
+          MAC_SIGNING_PASSWORD: ${{ secrets.MAC_SIGNING_PASSWORD }}
         run: python3 tools/apple/release.py "$APP_ID" --version "$APP_VERSION"
       - name: Preserve notarization diagnostics
         if: always()

@@ -18,6 +18,34 @@ import tempfile
 from build import APPS, ROOT, checksum, configuration, output, run
 
 
+def resign(bundle, app, work):
+    """Sign with the fork's self-signed certificate so Keychain access survives updates."""
+    certificate = work / 'self-signed.p12'
+    certificate.write_bytes(base64.b64decode(os.environ['MAC_SIGNING_P12'], validate=True))
+    certificate.chmod(0o600)
+    keychain = work / 'self-signed.keychain-db'
+    password = secrets.token_urlsafe(32)
+    original_keychains = shlex.split(output('security', 'list-keychains', '-d', 'user'))
+    run('security', 'create-keychain', '-p', password, keychain)
+    try:
+        run('security', 'list-keychains', '-d', 'user', '-s', keychain, *original_keychains)
+        run('security', 'unlock-keychain', '-p', password, keychain)
+        run('security', 'import', certificate, '-P', os.environ['MAC_SIGNING_PASSWORD'], '-k', keychain, '-T', '/usr/bin/codesign', capture_output=True)
+        run('security', 'set-key-partition-list', '-S', 'apple-tool:,apple:,codesign:', '-s', '-k', password, keychain, capture_output=True)
+        matches = re.findall(r'([A-F0-9]{40}) "', output('security', 'find-identity', '-p', 'codesigning', keychain))
+        if len(set(matches)) != 1:
+            raise ValueError('Expected exactly one self-signed identity')
+        if app.get('sparkle', False):
+            from sparkle import sign_framework
+            sign_framework(bundle / 'Contents' / 'Frameworks' / 'Sparkle.framework', matches[0], keychain, timestamp=False)
+        run('codesign', '--force', '--sign', matches[0], '--keychain', keychain, bundle)
+    finally:
+        try:
+            run('security', 'list-keychains', '-d', 'user', '-s', *original_keychains)
+        finally:
+            run('security', 'delete-keychain', keychain)
+
+
 def release_unsigned(app_id, version):
     """Fork releases without a Developer ID: ship the ad-hoc signed build in a DMG, not notarized."""
     app = configuration(app_id, version)
@@ -33,6 +61,8 @@ def release_unsigned(app_id, version):
         info = plistlib.loads((bundle / 'Contents' / 'Info.plist').read_bytes())
         if info['CFBundleIdentifier'] != app['bundle_id'] or info['CFBundleShortVersionString'] != version:
             raise ValueError('Built app identity or version does not match this release')
+        if os.environ.get('MAC_SIGNING_P12'):
+            resign(bundle, app, work)
         run('codesign', '--verify', '--strict', '--verbose=2', bundle)
         (staging / 'Applications').symlink_to('/Applications')
         image = destination / app['asset']

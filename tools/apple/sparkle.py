@@ -10,12 +10,12 @@ SPARKLE_URL = 'https://github.com/sparkle-project/Sparkle/releases/download/2.10
 SPARKLE_SHA256 = 'c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c'
 
 
-def sign_framework(framework, identity, keychain=None):
+def sign_framework(framework, identity, keychain=None, timestamp=None):
     version = framework / 'Versions' / 'B'
     if not version.is_dir():
         raise ValueError('Missing Sparkle framework')
     credentials = ['--keychain', keychain] if keychain else []
-    timestamp = ['--timestamp'] if identity != '-' else []
+    timestamp = ['--timestamp'] if (identity != '-' if timestamp is None else timestamp) else []
     for code in [version / 'Autoupdate', version / 'Updater.app',
                  version / 'XPCServices' / 'Downloader.xpc', version / 'XPCServices' / 'Installer.xpc', framework]:
         run('codesign', '--force', *timestamp, '--options', 'runtime', '--sign', identity, *credentials, code)
