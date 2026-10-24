@@ -22,9 +22,10 @@ if not args.offline:
     headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'reai-apps-site'}
     if os.environ.get('GH_TOKEN'):
         headers['Authorization'] = 'Bearer ' + os.environ['GH_TOKEN']
+    repository = os.environ.get('GITHUB_REPOSITORY', 'beint-no/reai-apps')
     page = 1
     while True:
-        request = urllib.request.Request(f'https://api.github.com/repos/beint-no/reai-apps/releases?per_page=100&page={page}', headers=headers)
+        request = urllib.request.Request(f'https://api.github.com/repos/{repository}/releases?per_page=100&page={page}', headers=headers)
         with urllib.request.urlopen(request, timeout=30) as response:
             batch = json.load(response)
         releases.extend(batch)
@@ -67,6 +68,8 @@ for app_id, app in apps.items():
                 f'<a class="button secondary" href="{html.escape(item["browser_download_url"], quote=True)}">Windows {architecture} <span aria-hidden="true">↓</span></a>'
                 for architecture, item in [('x64', asset), ('ARM64', arm)]) + '</div>'
             details = '<span class="release-note">Unsigned · Windows may warn or block. <a href="#windows-install">Installation help</a></span>' + details
+        elif os.environ.get('REAI_UNSIGNED_MAC'):
+            details = '<span class="release-note">Unsigned · First open: System Settings → Privacy &amp; Security → Open Anyway.</span>' + details
     else:
         label = 'Windows download coming soon' if app.get('platform') == 'windows' else 'Download coming soon'
         download = f'<span class="button unavailable">{label}</span>'

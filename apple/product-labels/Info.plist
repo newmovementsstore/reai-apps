@@ -36,9 +36,9 @@
 	<key>SUEnableAutomaticChecks</key>
 	<false/>
 	<key>SUFeedURL</key>
-	<string>https://beint-no.github.io/reai-apps/updates/product-labels.xml</string>
+	<string>https://newmovementsstore.github.io/reai-apps/updates/product-labels.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>MK47oKf9b/6S0WNpp+WnZMFNt9lI6vNYYoGim3KOajc=</string>
+	<string>D1BTnvRgsYroZtENfQ/Pt4Yo7y5ISWx/24x9v6wUGSg=</string>
 	<key>SURequireSignedFeed</key>
 	<true/>
 	<key>SUVerifyUpdateBeforeExtraction</key>

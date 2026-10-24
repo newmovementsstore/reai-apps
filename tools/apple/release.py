@@ -18,7 +18,36 @@ import tempfile
 from build import APPS, ROOT, checksum, configuration, output, run
 
 
+def release_unsigned(app_id, version):
+    """Fork releases without a Developer ID: ship the ad-hoc signed build in a DMG, not notarized."""
+    app = configuration(app_id, version)
+    if app.get('sparkle', False) and not os.environ.get(app['sparkle_key_secret']):
+        raise ValueError('Missing ' + app['sparkle_key_secret'])
+    destination = ROOT / 'dist' / app_id
+    with tempfile.TemporaryDirectory(prefix='reai-release-') as temporary:
+        work = Path(temporary)
+        staging = work / 'image'
+        staging.mkdir()
+        run('ditto', '-x', '-k', destination / 'unsigned.zip', staging)
+        bundle = staging / (app['name'] + '.app')
+        info = plistlib.loads((bundle / 'Contents' / 'Info.plist').read_bytes())
+        if info['CFBundleIdentifier'] != app['bundle_id'] or info['CFBundleShortVersionString'] != version:
+            raise ValueError('Built app identity or version does not match this release')
+        run('codesign', '--verify', '--strict', '--verbose=2', bundle)
+        (staging / 'Applications').symlink_to('/Applications')
+        image = destination / app['asset']
+        image.unlink(missing_ok=True)
+        run('diskutil', 'image', 'create', 'from', '--volumeName', app['name'], '--format', 'UDZO', staging, image)
+        checksum(image)
+        if app.get('sparkle', False):
+            from sparkle import generate_feed
+            generate_feed(image, version, work, app_id, app['sparkle_key_secret'])
+        print(f'Ready (unsigned): {image}')
+
+
 def release(app_id, version):
+    if os.environ.get('REAI_UNSIGNED_MAC'):
+        return release_unsigned(app_id, version)
     app = configuration(app_id, version)
     required = ['APPLE_SIGNING_CERTIFICATE', 'APPLE_SIGNING_PASSWORD', 'APPLE_NOTARY_KEY', 'APPLE_NOTARY_KEY_ID', 'APPLE_NOTARY_ISSUER', 'APPLE_TEAM_ID']
     missing = [name for name in required if not os.environ.get(name)]

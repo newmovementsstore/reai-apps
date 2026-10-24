@@ -23,6 +23,7 @@ def sign_framework(framework, identity, keychain=None):
 
 
 def generate_feed(image, version, work, app_id, key_secret):
+    repository = os.environ.get('GITHUB_REPOSITORY', 'beint-no/reai-apps')
     archive = work / 'Sparkle.tar.xz'
     with urllib.request.urlopen(SPARKLE_URL, timeout=60) as response:
         archive.write_bytes(response.read())
@@ -40,7 +41,7 @@ def generate_feed(image, version, work, app_id, key_secret):
         shutil.copy2(image, updates / image.name)
         feed = image.parent / f'{app_id}.xml'
         run(distribution / 'bin' / 'generate_appcast', '--ed-key-file', key,
-            '--download-url-prefix', f'https://github.com/beint-no/reai-apps/releases/download/{app_id}/v{version}/',
+            '--download-url-prefix', f'https://github.com/{repository}/releases/download/{app_id}/v{version}/',
             '--maximum-deltas', '0', '-o', feed, updates)
         run(distribution / 'bin' / 'sign_update', '--ed-key-file', key, '--verify', feed)
     finally:
