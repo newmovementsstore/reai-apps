@@ -58,9 +58,11 @@ struct LabelSettings: Codable, Equatable {
     var ratesDate: String?
     static let convertible = ["EUR", "USD", "SEK", "DKK", "GBP"]
     var customized: Bool { !(styles ?? [:]).isEmpty || skuPrefix != nil || originPrefix != nil || !(currencyTexts ?? [:]).isEmpty }
-    func style(_ role: LineRole) -> LineStyle { styles?[design.rawValue + "." + role.rawValue] ?? LineStyle() }
+    /// Price labels start with a fixed 24 pt price; every other line sizes itself to fit.
+    func defaultStyle(_ role: LineRole) -> LineStyle { design == .price && role == .price ? LineStyle(size: 24) : LineStyle() }
+    func style(_ role: LineRole) -> LineStyle { styles?[design.rawValue + "." + role.rawValue] ?? defaultStyle(role) }
     mutating func setStyle(_ style: LineStyle, for role: LineRole) {
-        var all = styles ?? [:]; all[design.rawValue + "." + role.rawValue] = style == LineStyle() ? nil : style
+        var all = styles ?? [:]; all[design.rawValue + "." + role.rawValue] = style == defaultStyle(role) ? nil : style
         styles = all.isEmpty ? nil : all
     }
     var resolvedSkuPrefix: String { skuPrefix ?? "SKU:" }

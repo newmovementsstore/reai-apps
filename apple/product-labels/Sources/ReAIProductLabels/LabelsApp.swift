@@ -421,7 +421,7 @@ struct LineEditor: View {
             HStack {
                 Text(t("Style applies to this line on every label with this design.")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button(t("Reset")) { style.wrappedValue = LineStyle() }.disabled(style.wrappedValue == LineStyle())
+                Button(t("Reset")) { style.wrappedValue = settings.defaultStyle(target.role) }.disabled(style.wrappedValue == settings.defaultStyle(target.role))
             }
         }
     }
